@@ -1,0 +1,308 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Đăng ký Zalo Chat</title>
+  <style>
+    :root {
+      --primary: #0084ff;
+      --primary-dark: #006bd6;
+      --surface: #ffffff;
+      --text: #1f2c3d;
+      --muted: #64748b;
+      --border: #dae4f2;
+      --danger: #d93025;
+      --success: #0f9f6e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(180deg, #eaf1fc 0%, #f4f7fb 100%);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+    }
+
+    .register-card {
+      width: min(460px, 100%);
+      background: var(--surface);
+      border-radius: 24px;
+      padding: 2rem;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary), #54b4ff);
+      color: #ffffff;
+      display: grid;
+      place-items: center;
+      font-size: 1.35rem;
+      font-weight: 800;
+    }
+
+    h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.75rem;
+      line-height: 1.2;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .field {
+      margin-bottom: 1rem;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 0.5rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 0.95rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #f8fbff;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+    }
+
+    .field input:focus {
+      border-color: rgba(0, 132, 255, 0.7);
+      box-shadow: 0 0 0 4px rgba(0, 132, 255, 0.08);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .button {
+      min-height: 48px;
+      padding: 0.9rem 1rem;
+      border: none;
+      border-radius: 999px;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
+    }
+
+    .button:hover {
+      background: var(--primary-dark);
+      box-shadow: 0 12px 26px rgba(0, 132, 255, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .button:disabled {
+      cursor: not-allowed;
+      opacity: 0.72;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .button.ghost {
+      background: #ffffff;
+      color: var(--primary);
+      border: 2px solid rgba(0, 132, 255, 0.18);
+    }
+
+    .button.ghost:hover {
+      background: #f3f9ff;
+      box-shadow: none;
+    }
+
+    .message {
+      min-height: 1.25rem;
+      margin-top: 1rem;
+      color: var(--danger);
+      font-size: 0.92rem;
+    }
+
+    .message.success {
+      color: var(--success);
+    }
+
+    .note {
+      margin-top: 1.25rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+      text-align: center;
+    }
+
+    .note a {
+      color: var(--primary);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .note a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 480px) {
+      .register-card {
+        padding: 1.5rem;
+        border-radius: 20px;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="register-card">
+    <div class="brand">
+      <div class="logo">Z</div>
+      <div>
+        <h1>Đăng ký</h1>
+        <p>Tạo tài khoản để sử dụng Zalo Chat.</p>
+      </div>
+    </div>
+
+    <form id="registerForm">
+      <div class="field">
+        <label for="username">Tên đăng nhập</label>
+        <input
+          id="username"
+          name="username"
+          type="text"
+          autocomplete="username"
+          placeholder="vd. nguyenvana"
+          required
+        />
+      </div>
+
+      <div class="field">
+        <label for="password">Mật khẩu</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="new-password"
+          placeholder="Tối thiểu 6 ký tự"
+          required
+        />
+      </div>
+
+      <div class="field">
+        <label for="confirm">Xác nhận mật khẩu</label>
+        <input
+          id="confirm"
+          name="confirm"
+          type="password"
+          autocomplete="new-password"
+          placeholder="Nhập lại mật khẩu"
+          required
+        />
+      </div>
+
+      <div class="actions">
+        <button id="submitButton" class="button" type="submit">Đăng ký</button>
+        <button id="backLogin" class="button ghost" type="button">Quay lại</button>
+      </div>
+
+      <div id="message" class="message" role="alert" aria-live="polite"></div>
+    </form>
+
+    <div class="note">Bạn đã có tài khoản? <a href="/login">Đăng nhập</a></div>
+  </main>
+
+  <script>
+    const registerForm = document.getElementById('registerForm');
+    const submitButton = document.getElementById('submitButton');
+    const message = document.getElementById('message');
+
+    document.getElementById('backLogin').addEventListener('click', () => {
+      window.location.href = '/login';
+    });
+
+    function showMessage(text, type = 'error') {
+      message.textContent = text;
+      message.classList.toggle('success', type === 'success');
+    }
+
+    registerForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      showMessage('');
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const confirm = document.getElementById('confirm').value;
+
+      if (!username || !password || !confirm) {
+        showMessage('Vui lòng điền đầy đủ thông tin.');
+        return;
+      }
+
+      if (password.length < 6) {
+        showMessage('Mật khẩu phải có ít nhất 6 ký tự.');
+        return;
+      }
+
+      if (password !== confirm) {
+        showMessage('Mật khẩu xác nhận không khớp.');
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = 'Đang đăng ký...';
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+
+        if (!res.ok) {
+          const payload = await res.json().catch(() => ({}));
+          showMessage(payload.error || 'Đăng ký thất bại.');
+          return;
+        }
+
+        showMessage('Đăng ký thành công. Đang chuyển tới trang đăng nhập...', 'success');
+        window.setTimeout(() => {
+          window.location.replace('/login');
+        }, 700);
+      } catch (err) {
+        showMessage('Không thể kết nối tới server. Hãy mở trang bằng http://localhost:8080');
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Đăng ký';
+      }
+    });
+  </script>
+</body>
+</html>

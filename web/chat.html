@@ -1,0 +1,345 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat Zalo</title>
+  <style>
+    :root {
+      --primary: #0084ff;
+      --surface: #ffffff;
+      --text: #1f2c3d;
+      --muted: #64748b;
+      --border: #d2d8e0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(180deg, #eaf1fc 0%, #f4f7fb 100%);
+      color: var(--text);
+      overflow: hidden;
+    }
+    .app {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      height: 100vh;
+      min-height: 0;
+      gap: 1rem;
+      padding: 1rem;
+    }
+    .sidebar, .chat-panel {
+      background: var(--surface);
+      border-radius: 24px;
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+      min-height: 0;
+    }
+    .sidebar { display: flex; flex-direction: column; }
+    .sidebar-header {
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: white; display: grid; place-items: center; font-weight: 700; font-size: 1.05rem; }
+    .sidebar-header .title { margin: 0; font-size: 0.95rem; font-weight: 700; }
+    .sidebar-header .subtitle { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.82rem; }
+    .chat-list { flex: 1; padding: 0.75rem; overflow-y: auto; }
+    .chat-card { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1rem; margin-bottom: 0.5rem; border-radius: 16px; transition: background 0.2s ease; cursor: pointer; }
+    .chat-card.active, .chat-card:hover { background: rgba(0, 132, 255, 0.08); }
+    .chat-card-avatar { width: 46px; height: 46px; border-radius: 50%; background: #c2d7ff; display: grid; place-items: center; color: var(--primary); font-weight: 700; }
+    .chat-card-info h3 { margin: 0; font-size: 0.95rem; font-weight: 700; }
+    .chat-card-info p { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.83rem; }
+    .chat-panel { display: flex; flex-direction: column; min-height: 0; }
+    .chat-header { padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+    .contact-info { display: flex; align-items: center; gap: 0.85rem; }
+    .contact-name { margin: 0; font-size: 1.05rem; font-weight: 700; }
+    .contact-status { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.84rem; }
+    .actions { display: flex; gap: 0.75rem; }
+    .action-btn { width: 38px; height: 38px; border-radius: 50%; border: none; background: #f4f7fb; color: var(--primary); cursor: pointer; display: grid; place-items: center; transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease; }
+    .action-btn:hover { transform: translateY(-1px); background: rgba(0, 132, 255, 0.12); }
+    #logoutButton { width: auto; min-width: 110px; border-radius: 999px; padding: 0 16px; background: var(--primary); color: white; font-weight: 700; }
+    #logoutButton:hover { background: #0069d9; }
+    .chat-window { flex: 1; min-height: 0; padding: 1.25rem 0.7rem 1.25rem 1.25rem; display: flex; flex-direction: column; overflow: hidden; background: linear-gradient(180deg, #eff6ff 0%, #f8fbff 100%); }
+    .messages { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; padding-right: 0.55rem; scrollbar-width: thin; scrollbar-color: rgba(99, 116, 139, 0.34) transparent; }
+    .messages::-webkit-scrollbar { width: 8px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: rgba(99, 116, 139, 0.24); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+    .messages:hover::-webkit-scrollbar-thumb { background: rgba(99, 116, 139, 0.42); border: 2px solid transparent; background-clip: padding-box; }
+    .messages::-webkit-scrollbar-thumb:hover { background: rgba(99, 116, 139, 0.58); border: 2px solid transparent; background-clip: padding-box; }
+    .message-row { display: flex; gap: 0.75rem; align-items: flex-end; }
+    .message-row.me { justify-content: flex-end; }
+    .message-bubble { max-width: 68%; padding: 0.85rem 1rem; border-radius: 18px; background: var(--surface); box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06); word-break: break-word; font-size: 0.95rem; }
+    .message-row.me .message-bubble { background: var(--primary); color: white; border-bottom-right-radius: 4px; }
+    .message-row.other .message-bubble { border-bottom-left-radius: 4px; }
+    .message-meta { margin-top: 0.45rem; color: var(--muted); font-size: 0.78rem; }
+    .message-row.me .message-meta { color: #000000; }
+    .chat-input { border-top: 1px solid var(--border); padding: 0.9rem 1rem; background: #f8fbff; display: flex; gap: 0.8rem; align-items: center; }
+    .chat-input textarea { flex: 1; border: 1px solid #dbe7f4; border-radius: 999px; padding: 0.9rem 1.1rem; resize: none; height: 48px; font-size: 0.95rem; font-family: inherit; outline: none; background: white; }
+    .chat-input button { border: none; background: var(--primary); color: white; padding: 0 20px; min-width: 110px; border-radius: 999px; font-weight: 700; cursor: pointer; }
+    .auth-info { padding: 0 1.25rem 0.75rem; color: var(--muted); font-size: 0.9rem; }
+    @media (max-width: 980px) { .app { grid-template-columns: 1fr; } .sidebar { order: 2; } .chat-panel { order: 1; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="sidebar">
+      <div class="sidebar-header">
+        <div class="avatar" id="sidebarAvatar">Z</div>
+        <div>
+          <div class="title" id="sidebarTitle">Zalo Chat</div>
+          <div class="subtitle">Đã đăng nhập</div>
+        </div>
+      </div>
+      <div class="chat-list" id="chatList">
+        <!-- user list populated by JS -->
+      </div>
+    </section>
+    <section class="chat-panel">
+      <header class="chat-header">
+        <div class="contact-info">
+          <div class="chat-card-avatar" id="contactAvatar">H</div>
+          <div>
+            <h1 class="contact-name" id="contactName">Hỗ trợ Zalo</h1>
+            <p class="contact-status" id="contactStatus">Đang hoạt động</p>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="action-btn" id="logoutButton">Đăng xuất</button>
+          <button class="action-btn">...</button>
+        </div>
+      </header>
+      <div class="auth-info" id="authInfo"></div>
+      <div class="chat-window">
+        <div id="messages" class="messages"></div>
+      </div>
+      <form id="form" class="chat-input">
+        <textarea id="message" autocomplete="off" placeholder="Nhập tin nhắn..." rows="1"></textarea>
+        <button type="submit">Gửi</button>
+      </form>
+    </section>
+  </div>
+  <script>
+    const messagesEl = document.getElementById('messages');
+    const messageInput = document.getElementById('message');
+    const form = document.getElementById('form');
+    const logoutButton = document.getElementById('logoutButton');
+    const authInfo = document.getElementById('authInfo');
+    const sidebarAvatar = document.getElementById('sidebarAvatar');
+    const sidebarTitle = document.getElementById('sidebarTitle');
+
+    const token = sessionStorage.getItem('chat_token') || localStorage.getItem('chat_token');
+    const username = sessionStorage.getItem('chat_user') || localStorage.getItem('chat_user');
+
+    if (!token || !username) {
+      window.location.href = '/login';
+    }
+
+    authInfo.textContent = `Bạn đang đăng nhập với: ${username}`;
+
+    // update sidebar header to show logged-in user
+    if (sidebarAvatar) sidebarAvatar.textContent = username.charAt(0).toUpperCase();
+    if (sidebarTitle) sidebarTitle.textContent = username;
+
+    let ws = null;
+    const chatList = document.getElementById('chatList');
+    const contactNameEl = document.getElementById('contactName');
+    const contactAvatarEl = document.getElementById('contactAvatar');
+
+    let selectedContact = null;
+
+    loadChatList();
+    initWebSocket();
+
+    logoutButton.addEventListener('click', () => {
+      if (ws) {
+        ws.close();
+      }
+      localStorage.removeItem('chat_token');
+      localStorage.removeItem('chat_user');
+      sessionStorage.removeItem('chat_token');
+      sessionStorage.removeItem('chat_user');
+      window.location.replace('/login');
+    });
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      sendMessage();
+    });
+
+    messageInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message || !ws || ws.readyState !== WebSocket.OPEN || !selectedContact) {
+        return;
+      }
+      const payload = {
+        sender: username,
+        to: selectedContact,
+        message,
+        clientId: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+      };
+
+      ws.send(JSON.stringify(payload));
+      appendMessage(username, message, true);
+      messageInput.value = '';
+    }
+
+
+    function loadChatList() {
+      fetch('/api/users')
+        .then(res => {
+          if (!res.ok) throw new Error('failed');
+          return res.json();
+        })
+        .then(users => {
+          // render users except current user
+          chatList.innerHTML = users
+            .filter(u => u.username !== username)
+            .map(u => `
+              <article class="chat-card" data-username="${u.username}">
+                <div class="chat-card-avatar">${u.username.charAt(0).toUpperCase()}</div>
+                <div class="chat-card-info">
+                  <h3>${u.username}</h3>
+                  <p>Gửi tin nhắn để bắt đầu chat</p>
+                </div>
+              </article>
+            `).join('');
+
+          // attach click handlers
+          const cards = chatList.querySelectorAll('.chat-card');
+          cards.forEach(card => {
+            card.addEventListener('click', () => {
+              const uname = card.getAttribute('data-username');
+              selectContact(uname, card);
+            });
+          });
+
+          // auto-select first contact if none selected
+          if (!selectedContact) {
+            const first = chatList.querySelector('.chat-card');
+            if (first) {
+              const uname = first.getAttribute('data-username');
+              selectContact(uname, first);
+            }
+          }
+        })
+        .catch(() => {
+          chatList.innerHTML = '<p style="padding:1rem;color:var(--muted)">Không thể tải danh sách trò chuyện</p>';
+        });
+    }
+
+    async function selectContact(uname, cardEl) {
+      selectedContact = uname;
+      // update header
+      contactNameEl.textContent = uname;
+      contactAvatarEl.textContent = uname.charAt(0).toUpperCase();
+
+      // update active class
+      chatList.querySelectorAll('.chat-card').forEach(c => c.classList.remove('active'));
+      if (cardEl) cardEl.classList.add('active');
+
+      // clear messages for new conversation (simple demo)
+      messagesEl.innerHTML = '';
+      const messageCount = await loadConversationHistory(uname);
+      if (messageCount === 0) {
+        appendMessage('Hệ thống', `Bạn đang chat với: ${uname}`, false);
+      }
+    }
+
+    async function loadConversationHistory(contact) {
+      try {
+        const res = await fetch(`/api/messages?with=${encodeURIComponent(contact)}&limit=100`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error('cannot load messages');
+        }
+
+        const messages = await res.json();
+        messages.forEach(item => {
+          appendMessage(item.sender, item.message, item.sender === username, item.sentAt);
+        });
+        return messages.length;
+      } catch (err) {
+        appendMessage('Hệ thống', 'Không thể tải lịch sử trò chuyện.', false);
+        return 0;
+      }
+    }
+
+    function initWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${protocol}://${window.location.host}/ws?token=${encodeURIComponent(token)}`);
+
+      ws.addEventListener('open', () => {
+        appendMessage('Hệ thống', 'Kết nối WebSocket thành công.', false);
+      });
+
+      ws.addEventListener('message', event => {
+        let payload;
+        try {
+          payload = JSON.parse(event.data);
+        } catch (err) {
+          payload = { sender: 'unknown', message: event.data, sentAt: new Date().toISOString() };
+        }
+
+        // Only display messages relevant to the current conversation
+        // Show if: (1) sender is me and 'to' matches selectedContact
+        //          (2) sender is selectedContact and 'to' is me
+        //          (3) no 'to' field (broadcast)
+        const msgTo = payload.to || null;
+        const isFromMe = payload.sender === username;
+        let isFromContact = selectedContact && payload.sender === selectedContact;
+        const isToMe = msgTo === username;
+        let isToContact = msgTo === selectedContact;
+
+        if (isToMe && !isFromMe && payload.sender !== selectedContact) {
+          const senderCard = chatList.querySelector(`[data-username="${payload.sender}"]`);
+          selectContact(payload.sender, senderCard).then(() => {
+            appendMessage(payload.sender, payload.message, false, payload.sentAt);
+          });
+          return;
+        }
+
+        const shouldShow = (!msgTo) || (isFromMe && isToContact) || (isFromContact && isToMe) || (isFromMe && !selectedContact);
+        if (!shouldShow) return;
+        if (isFromMe && isToContact) return;
+
+        appendMessage(payload.sender, payload.message, payload.sender === username, payload.sentAt);
+      });
+
+      ws.addEventListener('close', () => {
+        appendMessage('Hệ thống', 'Mất kết nối với server.', false);
+      });
+
+      ws.addEventListener('error', () => {
+        appendMessage('Hệ thống', 'Lỗi kết nối WebSocket.', false);
+      });
+    }
+
+    function appendMessage(sender, message, isMe, sentAt) {
+      const date = sentAt ? new Date(sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const row = document.createElement('div');
+      row.className = `message-row ${isMe ? 'me' : 'other'}`;
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble';
+      bubble.innerHTML = `<div>${message}</div><div class="message-meta">${sender} · ${date}</div>`;
+      row.appendChild(bubble);
+      messagesEl.appendChild(row);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+  </script>
+</body>
+</html>

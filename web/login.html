@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Đăng nhập Zalo Chat</title>
+  <style>
+    :root {
+      --primary: #0084ff;
+      --surface: #ffffff;
+      --text: #1f2c3d;
+      --muted: #64748b;
+      --border: #dae4f2;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(180deg, #eaf1fc 0%, #f4f7fb 100%);
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+    }
+    .login-card {
+      width: min(420px, 100%);
+      background: var(--surface);
+      border-radius: 28px;
+      padding: 2rem;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+    }
+    .login-card h1 {
+      margin: 0 0 0.5rem;
+      font-size: 1.8rem;
+      color: var(--text);
+    }
+    .login-card p {
+      margin: 0 0 1.75rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .field {
+      margin-bottom: 1rem;
+    }
+    .field label {
+      display: block;
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+      color: var(--muted);
+    }
+    .field input {
+      width: 100%;
+      padding: 0.95rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #f8fbff;
+      font-size: 1rem;
+      outline: none;
+    }
+    .field input:focus {
+      border-color: rgba(0, 132, 255, 0.7);
+      box-shadow: 0 0 0 4px rgba(0, 132, 255, 0.08);
+    }
+    .button {
+      width: 100%;
+      padding: 0.95rem 1rem;
+      border-radius: 999px;
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .button.secondary {
+      margin-top: 0.75rem;
+      background: linear-gradient(90deg, rgba(255,255,255,0.98), rgba(248,251,255,0.98));
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      box-shadow: 0 10px 22px rgba(2,132,255,0.14);
+      font-weight: 800;
+      padding: 0.95rem 1rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, color 0.12s ease;
+    }
+    .button.secondary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 38px rgba(2,132,255,0.22);
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .login-error {
+      min-height: 1.25rem;
+      margin-top: 0.9rem;
+      color: #d93025;
+      font-size: 0.92rem;
+    }
+    .note {
+      margin-top: 1.5rem;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .note strong {
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h1>Đăng nhập Zalo Chat</h1>
+    <p>Vui lòng đăng nhập để bắt đầu trò chuyện với Hỗ trợ Zalo.</p>
+    <form id="loginForm">
+      <div class="field">
+        <label for="username">Tên đăng nhập</label>
+        <input id="username" name="username" type="text" autocomplete="username" placeholder="admin" required />
+      </div>
+      <div class="field">
+        <label for="password">Mật khẩu</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="password" required />
+      </div>
+      <button class="button" type="submit">Đăng nhập</button>
+      <button id="registerButton" class="button secondary" type="button">Đăng ký</button>
+      <div class="login-error" id="loginError"></div>
+    </form>
+    <p class="note">Demo: <strong>admin</strong> / <strong>password</strong> hoặc <strong>guest</strong> / <strong>guest</strong></p>
+  </div>
+  <script>
+    const loginForm = document.getElementById('loginForm');
+    const loginError = document.getElementById('loginError');
+    const baseUrl = window.location.origin;
+
+    loginForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      loginError.textContent = '';
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      if (!username || !password) {
+        loginError.textContent = 'Vui lòng điền đủ thông tin.';
+        return;
+      }
+
+      try {
+        const res = await fetch(`${baseUrl}/api/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+
+        if (!res.ok) {
+          const payload = await res.json();
+          loginError.textContent = payload.error || 'Đăng nhập thất bại.';
+          return;
+        }
+
+        const data = await res.json();
+        sessionStorage.setItem('chat_token', data.token);
+        sessionStorage.setItem('chat_user', username);
+        localStorage.removeItem('chat_token');
+        localStorage.removeItem('chat_user');
+        window.location.replace('/chat');
+      } catch (err) {
+        loginError.textContent = 'Không thể kết nối tới server. Hãy mở trang bằng http://localhost:8080';
+      }
+    });
+
+    // navigate to register page
+    const registerButton = document.getElementById('registerButton');
+    if (registerButton) {
+      registerButton.addEventListener('click', () => {
+        window.location.href = '/register';
+      });
+    }
+  </script>
+</body>
+</html>
