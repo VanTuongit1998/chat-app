@@ -86,8 +86,7 @@ func main() {
 	go chatUsecase.StartQueueMonitor(ctx)
 
 	jwtMiddleware := middleware.JwtAuthentication(jwtService)
-	loggerMiddleware := middleware.Logger
-	router := routes.NewRouter(authHandler, userHandler, roomHandler, chatHandler, jwtMiddleware, loggerMiddleware)
+	router := routes.NewRouter(authHandler, userHandler, roomHandler, chatHandler, jwtMiddleware)
 
 	listenAddr := fmt.Sprintf(":%s", appPort)
 	log.Printf("server listening on %s", listenAddr)

@@ -4,48 +4,38 @@ import (
 	"net/http"
 
 	"chat-app/internal/handler"
+
+	"github.com/gin-gonic/gin"
 )
 
-func NewRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler, roomHandler *handler.RoomHandler, chatHandler *handler.ChatHandler, jwtMiddleware func(http.Handler) http.Handler, loggerMiddleware func(http.Handler) http.Handler) http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/login", authHandler.Login)
-	mux.HandleFunc("/api/register", authHandler.Register)
-	mux.HandleFunc("/api/users", userHandler.Users)
-	mux.HandleFunc("/api/rooms", roomHandler.Rooms)
-	mux.Handle("/api/messages", jwtMiddleware(http.HandlerFunc(chatHandler.Messages)))
-	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			http.ServeFile(w, r, "web/login.html")
-			return
-		}
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+func NewRouter(authHandler *handler.AuthHandler, userHandler *handler.UserHandler, roomHandler *handler.RoomHandler, chatHandler *handler.ChatHandler, jwtMiddleware func(http.Handler) http.Handler) http.Handler {
+	router := gin.New()
+	router.HandleMethodNotAllowed = true
+	router.Use(gin.Logger(), gin.Recovery())
+
+	router.POST("/api/login", gin.WrapF(authHandler.Login))
+	router.POST("/api/register", gin.WrapF(authHandler.Register))
+	router.GET("/api/users", gin.WrapF(userHandler.Users))
+	router.GET("/api/rooms", gin.WrapF(roomHandler.Rooms))
+	router.GET("/api/messages", gin.WrapH(jwtMiddleware(http.HandlerFunc(chatHandler.Messages))))
+
+	router.GET("/login", func(c *gin.Context) {
+		c.File("web/login.html")
 	})
-	// serve register page
-	mux.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			http.ServeFile(w, r, "web/register.html")
-			return
-		}
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	router.GET("/register", func(c *gin.Context) {
+		c.File("web/register.html")
 	})
-	mux.HandleFunc("/chat", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		http.ServeFile(w, r, "web/chat.html")
+	router.GET("/chat", func(c *gin.Context) {
+		c.File("web/chat.html")
 	})
-	mux.Handle("/ws", jwtMiddleware(http.HandlerFunc(chatHandler.Websocket)))
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
+	router.GET("/ws", gin.WrapH(jwtMiddleware(http.HandlerFunc(chatHandler.Websocket))))
+
+	router.GET("/healthz", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
 	})
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
-		http.NotFound(w, r)
+	router.GET("/", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/login")
 	})
-	return loggerMiddleware(mux)
+
+	return router
 }
