@@ -3,6 +3,7 @@ package websocket
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"sync"
 
 	"chat-app/internal/model"
@@ -92,18 +93,23 @@ func (h *Hub) publishMessage(msg *model.Message) error {
 func (h *Hub) sendMessage(message []byte) {
 	var msg model.Message
 	if err := json.Unmarshal(message, &msg); err != nil {
+		log.Printf("[Hub] Unmarshal failed: %v, broadcasting raw message", err)
 		for client := range h.clients {
 			h.sendToClient(client, message)
 		}
 		return
 	}
 
+	log.Printf("[Hub] Broadcasting message from %s to %s", msg.Sender, msg.To)
+	count := 0
 	for client := range h.clients {
 		if msg.To != "" && client.username != msg.Sender && client.username != msg.To {
 			continue
 		}
 		h.sendToClient(client, message)
+		count++
 	}
+	log.Printf("[Hub] Sent to %d clients", count)
 }
 
 func (h *Hub) sendToClient(client *Client, message []byte) {

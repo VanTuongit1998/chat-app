@@ -81,10 +81,64 @@
     .chat-input textarea { flex: 1; border: 1px solid #dbe7f4; border-radius: 999px; padding: 0.9rem 1.1rem; resize: none; height: 48px; font-size: 0.95rem; font-family: inherit; outline: none; background: white; }
     .chat-input button { border: none; background: var(--primary); color: white; padding: 0 20px; min-width: 110px; border-radius: 999px; font-weight: 700; cursor: pointer; }
     .auth-info { padding: 0 1.25rem 0.75rem; color: var(--muted); font-size: 0.9rem; }
+
+    /* Toast Notification */
+    #toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast {
+      background: var(--surface);
+      border-left: 4px solid var(--primary);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 12px 20px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: slideIn 0.3s ease-out forwards;
+      min-width: 280px;
+      cursor: pointer;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .toast-info h4 { margin: 0; font-size: 0.9rem; }
+    .toast-info p { margin: 4px 0 0; font-size: 0.85rem; color: var(--muted); }
+
+    /* Unread Badge */
+    .unread-badge {
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      background-color: #ff4d4f;
+      color: white;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: none; /* Hidden by default */
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      right: 15px;
+      box-shadow: 0 2px 4px rgba(255, 77, 79, 0.3);
+      pointer-events: none;
+    }
+    .chat-card { position: relative; }
+    .chat-card.has-unread .unread-badge { display: flex; } /* Show only when has-unread class is present */
+    .chat-card.has-unread .chat-card-info p { color: var(--primary); font-weight: 600; }
+
     @media (max-width: 980px) { .app { grid-template-columns: 1fr; } .sidebar { order: 2; } .chat-panel { order: 1; } }
   </style>
 </head>
 <body>
+  <div id="toast-container"></div>
   <div class="app">
     <section class="sidebar">
       <div class="sidebar-header">
@@ -151,6 +205,11 @@
 
     let selectedContact = null;
 
+    // Request notification permission
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
     loadChatList();
     initWebSocket();
 
@@ -206,12 +265,13 @@
           chatList.innerHTML = users
             .filter(u => u.username !== username)
             .map(u => `
-              <article class="chat-card" data-username="${u.username}">
+              <article class="chat-card" data-username="${u.username}" id="card-${u.username}">
                 <div class="chat-card-avatar">${u.username.charAt(0).toUpperCase()}</div>
                 <div class="chat-card-info">
                   <h3>${u.username}</h3>
-                  <p>Gửi tin nhắn để bắt đầu chat</p>
+                  <p class="last-msg">Gửi tin nhắn để bắt đầu chat</p>
                 </div>
+                <div class="unread-badge" id="badge-${u.username}"></div>
               </article>
             `).join('');
 
@@ -239,14 +299,27 @@
     }
 
     async function selectContact(uname, cardEl) {
+      if (selectedContact === uname) {
+        markAsRead(uname); // Re-ensure read if clicked again
+        return;
+      }
       selectedContact = uname;
+      
+      // Mark as read
+      markAsRead(uname);
+
       // update header
       contactNameEl.textContent = uname;
       contactAvatarEl.textContent = uname.charAt(0).toUpperCase();
 
       // update active class
       chatList.querySelectorAll('.chat-card').forEach(c => c.classList.remove('active'));
-      if (cardEl) cardEl.classList.add('active');
+      if (cardEl) {
+        cardEl.classList.add('active');
+      } else {
+        const card = document.getElementById(`card-${uname}`);
+        if (card) card.classList.add('active');
+      }
 
       // clear messages for new conversation (simple demo)
       messagesEl.innerHTML = '';
@@ -254,6 +327,75 @@
       if (messageCount === 0) {
         appendMessage('Hệ thống', `Bạn đang chat với: ${uname}`, false);
       }
+    }
+
+    function markAsRead(uname) {
+      const card = document.getElementById(`card-${uname}`);
+      if (card) {
+        card.classList.remove('has-unread');
+        const badge = document.getElementById(`badge-${uname}`);
+        if (badge) {
+          badge.textContent = '0';
+        }
+      }
+    }
+
+    function markAsUnread(uname, message) {
+      const card = document.getElementById(`card-${uname}`);
+      if (card) {
+        card.classList.add('has-unread');
+        const lastMsgEl = card.querySelector('.last-msg');
+        if (lastMsgEl) lastMsgEl.textContent = message;
+        
+        const badge = document.getElementById(`badge-${uname}`);
+        if (badge) {
+          let count = parseInt(badge.textContent) || 0;
+          badge.textContent = count + 1;
+        }
+        
+        // Move card to top
+        chatList.prepend(card);
+      }
+    }
+
+    function showToast(sender, message) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `
+        <div class="chat-card-avatar" style="width:32px;height:32px;font-size:0.8rem;">${sender.charAt(0).toUpperCase()}</div>
+        <div class="toast-info">
+          <h4>${sender}</h4>
+          <p>${message.length > 40 ? message.substring(0, 37) + '...' : message}</p>
+        </div>
+      `;
+      toast.onclick = () => {
+        const card = document.getElementById(`card-${sender}`);
+        selectContact(sender, card);
+        toast.remove();
+      };
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 300);
+      }, 5000);
+    }
+
+    function showBrowserNotification(sender, message) {
+      if (!("Notification" in window) || Notification.permission !== "granted") return;
+      
+      const notification = new Notification(`Tin nhắn mới từ ${sender}`, {
+        body: message,
+        icon: '/favicon.ico' // Or a default avatar
+      });
+      
+      notification.onclick = () => {
+        window.focus();
+        const card = document.getElementById(`card-${sender}`);
+        selectContact(sender, card);
+        notification.close();
+      };
     }
 
     async function loadConversationHistory(contact) {
@@ -288,36 +430,43 @@
       });
 
       ws.addEventListener('message', event => {
+        console.log('WebSocket message received:', event.data);
         let payload;
         try {
           payload = JSON.parse(event.data);
         } catch (err) {
+          console.error('Failed to parse message:', err);
           payload = { sender: 'unknown', message: event.data, sentAt: new Date().toISOString() };
         }
 
-        // Only display messages relevant to the current conversation
-        // Show if: (1) sender is me and 'to' matches selectedContact
-        //          (2) sender is selectedContact and 'to' is me
-        //          (3) no 'to' field (broadcast)
         const msgTo = payload.to || null;
         const isFromMe = payload.sender === username;
-        let isFromContact = selectedContact && payload.sender === selectedContact;
         const isToMe = msgTo === username;
-        let isToContact = msgTo === selectedContact;
+        
+        console.log(`Msg from ${payload.sender} to ${msgTo}. isFromMe: ${isFromMe}, isToMe: ${isToMe}, selected: ${selectedContact}`);
 
-        if (isToMe && !isFromMe && payload.sender !== selectedContact) {
-          const senderCard = chatList.querySelector(`[data-username="${payload.sender}"]`);
-          selectContact(payload.sender, senderCard).then(() => {
+        if (isFromMe) return; // Already handled locally when sending
+
+        if (isToMe) {
+          if (payload.sender === selectedContact) {
+            // Message from current contact
             appendMessage(payload.sender, payload.message, false, payload.sentAt);
-          });
+            if (document.hidden) {
+              showBrowserNotification(payload.sender, payload.message);
+            }
+          } else {
+            // Message from someone else
+            markAsUnread(payload.sender, payload.message);
+            showToast(payload.sender, payload.message);
+            showBrowserNotification(payload.sender, payload.message);
+          }
           return;
         }
 
-        const shouldShow = (!msgTo) || (isFromMe && isToContact) || (isFromContact && isToMe) || (isFromMe && !selectedContact);
-        if (!shouldShow) return;
-        if (isFromMe && isToContact) return;
-
-        appendMessage(payload.sender, payload.message, payload.sender === username, payload.sentAt);
+        // Broadcast messages (no 'to' field)
+        if (!msgTo) {
+          appendMessage(payload.sender, payload.message, false, payload.sentAt);
+        }
       });
 
       ws.addEventListener('close', () => {
